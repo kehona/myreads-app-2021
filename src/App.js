@@ -3,21 +3,9 @@ import Header from './components/Header'
 import * as BooksAPI from './BooksAPI'
 import './App.css'
 import Shelves from './components/Shelves'
+import Book from './components/Book'
 
 const BooksApp = () => {
-
-  useEffect(() => {
-
-    BooksAPI.getAll()
-      .then(data => 
-        {
-          console.log(data)
-          setBooks(data)
-        }
-      );
-  }, [])
-
- 
 
   /* TODO: Instead of using this state variable to keep track of which page
   * we're on, use the URL in the browser's address bar. This will ensure that
@@ -27,10 +15,67 @@ const BooksApp = () => {
   const [showSearchPage, setShowSearchPage] = useState(false);
 
   const [books, setBooks] = useState([])
+  const [mapOfIdToBooks, setMapOfIdToBooks] = useState(new Map());
+
+  const [searchBooks, setSearchBooks] = useState([]);
+  const [mergedBooks, setMergedBooks] = useState([]);
+
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+
+    BooksAPI.getAll()
+      .then(data => 
+        {
+          setBooks(data)
+          setMapOfIdToBooks(createMapOfBooks(data))
+        }
+      );
+  }, [])
+
+  useEffect(() => {
+
+    let isActive = true;
+    if (query) {
+      BooksAPI.search(query).then(data => {
+        if (data.error) {
+          setSearchBooks([])
+        } else {
+          if (isActive) {
+            setSearchBooks(data);
+          }
+        }
+      })
+    }
+
+    return () => {
+      isActive = false;
+      setSearchBooks([])
+    }
+
+  }, [query])
+
+
+  useEffect(() => {
+
+   const combined = searchBooks.map(book => {
+     if (mapOfIdToBooks.has(book.id)) {
+       return mapOfIdToBooks.get(book.id);
+     } else {
+       return book;
+     }
+   })
+   setMergedBooks(combined);
+  }, [searchBooks])
+
+  
+  const createMapOfBooks = (books) => {
+    const map = new Map();
+    books.map(book => map.set(book.id, book));
+    return map;
+  }
 
   const updateBookShelf = (book, whereTo) => {
-    console.log(book)
-    console.log(whereTo)
     const updatedBooks = books.map(b => {
       if (b.id === book.id) {
         book.shelf = whereTo;
@@ -39,7 +84,7 @@ const BooksApp = () => {
       return b;
     })
     setBooks(updatedBooks);
-    BooksAPI.update(book, whereTo).then(data => console.log(data));
+    BooksAPI.update(book, whereTo);
   }
 
   return (
@@ -57,12 +102,18 @@ const BooksApp = () => {
                   However, remember that the BooksAPI.search method DOES search by title or author. So, don't worry if
                   you don't find a specific author or title. Every search is limited by search terms.
                 */}
-              <input type="text" placeholder="Search by title or author" />
-
+              <input type="text" placeholder="Search by title or author" value={query} onChange={(e) => setQuery(e.target.value)}/>
+              {console.log(mergedBooks)}
             </div>
           </div>
           <div className="search-books-results">
-            <ol className="books-grid"></ol>
+            <ol className="books-grid">
+            {mergedBooks.map(b => (
+                        <li key={b.id}>
+                            <Book book={b} changeBookShelf={updateBookShelf}/>
+                        </li>
+                    ))}
+            </ol>
           </div>
         </div>
       ) : (
@@ -72,7 +123,7 @@ const BooksApp = () => {
             <Shelves books={books} updateBookShelf={updateBookShelf} />
           </div>
           <div className="open-search">
-            <button onClick={() => this.setState({ showSearchPage: true })}>Add a book</button>
+            <button onClick={() => setShowSearchPage(true)}>Add a book</button>
           </div>
         </div>
       )}
