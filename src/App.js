@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { BrowserRouter as Router, Switch, Route, Link } from 'react-router-dom'
 import Header from './components/Header'
 import * as BooksAPI from './BooksAPI'
 import './App.css'
@@ -12,7 +13,6 @@ const BooksApp = () => {
   * users can use the browser's back and forward buttons to navigate between
   * pages, as well as provide a good URL they can bookmark and share.
   */
-  const [showSearchPage, setShowSearchPage] = useState(false);
 
   const [books, setBooks] = useState([])
   const [mapOfIdToBooks, setMapOfIdToBooks] = useState(new Map());
@@ -25,11 +25,10 @@ const BooksApp = () => {
   useEffect(() => {
 
     BooksAPI.getAll()
-      .then(data => 
-        {
-          setBooks(data)
-          setMapOfIdToBooks(createMapOfBooks(data))
-        }
+      .then(data => {
+        setBooks(data)
+        setMapOfIdToBooks(createMapOfBooks(data))
+      }
       );
   }, [])
 
@@ -58,17 +57,17 @@ const BooksApp = () => {
 
   useEffect(() => {
 
-   const combined = searchBooks.map(book => {
-     if (mapOfIdToBooks.has(book.id)) {
-       return mapOfIdToBooks.get(book.id);
-     } else {
-       return book;
-     }
-   })
-   setMergedBooks(combined);
+    const combined = searchBooks.map(book => {
+      if (mapOfIdToBooks.has(book.id)) {
+        return mapOfIdToBooks.get(book.id);
+      } else {
+        return book;
+      }
+    })
+    setMergedBooks(combined);
   }, [searchBooks])
 
-  
+
   const createMapOfBooks = (books) => {
     const map = new Map();
     books.map(book => map.set(book.id, book));
@@ -83,18 +82,29 @@ const BooksApp = () => {
       }
       return b;
     })
+    if (!mapOfIdToBooks.has(book.id)) {
+      book.shelf = whereTo;
+      updatedBooks.push(book)
+    }
     setBooks(updatedBooks);
     BooksAPI.update(book, whereTo);
   }
 
   return (
     <div className="app">
-      {showSearchPage ? (
-        <div className="search-books">
-          <div className="search-books-bar">
-            <button className="close-search" onClick={() => setShowSearchPage(false)}>Close</button>
-            <div className="search-books-input-wrapper">
-              {/*
+      <Router>
+
+        <Switch>
+
+          {/* SEARCH */}
+          <Route path="/search">
+            <div className="search-books">
+              <div className="search-books-bar">
+                <Link to="/">
+                  <button className="close-search">Close</button>
+                </Link>
+                <div className="search-books-input-wrapper">
+                  {/*
                   NOTES: The search from BooksAPI is limited to a particular set of search terms.
                   You can find these search terms here:
                   https://github.com/udacity/reactnd-project-myreads-starter/blob/master/SEARCH_TERMS.md
@@ -102,31 +112,40 @@ const BooksApp = () => {
                   However, remember that the BooksAPI.search method DOES search by title or author. So, don't worry if
                   you don't find a specific author or title. Every search is limited by search terms.
                 */}
-              <input type="text" placeholder="Search by title or author" value={query} onChange={(e) => setQuery(e.target.value)}/>
-              {console.log(mergedBooks)}
+                  <input type="text" placeholder="Search by title or author" value={query} onChange={(e) => setQuery(e.target.value)} />
+                  {console.log(mergedBooks)}
+                </div>
+              </div>
+              <div className="search-books-results">
+                <ol className="books-grid">
+                  {mergedBooks.map(b => (
+                    <li key={b.id}>
+                      <Book book={b} changeBookShelf={updateBookShelf} />
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </div>
-          </div>
-          <div className="search-books-results">
-            <ol className="books-grid">
-            {mergedBooks.map(b => (
-                        <li key={b.id}>
-                            <Book book={b} changeBookShelf={updateBookShelf}/>
-                        </li>
-                    ))}
-            </ol>
-          </div>
-        </div>
-      ) : (
-        <div className="list-books">
-          <Header />
-          <div className="list-books-content">
-            <Shelves books={books} updateBookShelf={updateBookShelf} />
-          </div>
-          <div className="open-search">
-            <button onClick={() => setShowSearchPage(true)}>Add a book</button>
-          </div>
-        </div>
-      )}
+          </Route>
+
+          {/* MAIN PAGE */}
+          <Route path="/">
+            <div className="list-books">
+            {console.log("BOOKS", books)}
+
+              <Header />
+              <div className="list-books-content">
+                <Shelves books={books} updateBookShelf={updateBookShelf} />
+              </div>
+              <div className="open-search">
+                <Link to="/search">
+                  <button>Add a book</button>
+                </Link>
+              </div>
+            </div>
+          </Route>
+        </Switch>
+      </Router>
     </div>
   )
 
