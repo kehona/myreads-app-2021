@@ -5,6 +5,9 @@ import * as BooksAPI from './BooksAPI'
 import './App.css'
 import Shelves from './components/Shelves'
 import Book from './components/Book'
+import { useDebounce } from 'use-debounce';
+
+import useQuery from './hooks/useQuery'
 
 const BooksApp = () => {
 
@@ -17,10 +20,10 @@ const BooksApp = () => {
   const [books, setBooks] = useState([])
   const [mapOfIdToBooks, setMapOfIdToBooks] = useState(new Map());
 
-  const [searchBooks, setSearchBooks] = useState([]);
+  const [query, setQuery] = useState("");
+  const [searchBooks, setSearchBooks] = useQuery(query);
   const [mergedBooks, setMergedBooks] = useState([]);
 
-  const [query, setQuery] = useState("");
 
   useEffect(() => {
 
@@ -31,28 +34,6 @@ const BooksApp = () => {
       }
       );
   }, [])
-
-  useEffect(() => {
-
-    let isActive = true;
-    if (query) {
-      BooksAPI.search(query).then(data => {
-        if (data.error) {
-          setSearchBooks([])
-        } else {
-          if (isActive) {
-            setSearchBooks(data);
-          }
-        }
-      })
-    }
-
-    return () => {
-      isActive = false;
-      setSearchBooks([])
-    }
-
-  }, [query])
 
 
   useEffect(() => {
@@ -113,7 +94,6 @@ const BooksApp = () => {
                   you don't find a specific author or title. Every search is limited by search terms.
                 */}
                   <input type="text" placeholder="Search by title or author" value={query} onChange={(e) => setQuery(e.target.value)} />
-                  {console.log(mergedBooks)}
                 </div>
               </div>
               <div className="search-books-results">
@@ -131,7 +111,7 @@ const BooksApp = () => {
           {/* MAIN PAGE */}
           <Route path="/">
             <div className="list-books">
-            {console.log("BOOKS", books)}
+            {console.log("SEARCH", searchBooks)}
 
               <Header />
               <div className="list-books-content">
